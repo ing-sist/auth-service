@@ -1,0 +1,28 @@
+services:
+  api:
+    container_name: "auth-api"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8080"
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: auth-db
+      DB_HOST: auth-postgres_db
+      DB_PORT: 5432
+
+  db:
+    container_name: auth-postgres_db
+    image: postgres:17.6
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth-db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
