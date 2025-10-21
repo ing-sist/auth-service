@@ -1,0 +1,117 @@
+plugins {
+	id 'org.jetbrains.kotlin.jvm' version '1.9.23'
+	id 'org.jetbrains.kotlin.plugin.spring' version '1.9.23'
+	id 'org.springframework.boot' version '3.5.6'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.jetbrains.kotlin.plugin.jpa' version '1.9.23'
+    id 'jacoco'
+    id 'com.diffplug.spotless' version '6.25.0'
+    id 'io.gitlab.arturbosch.detekt' version '1.23.6'
+}
+
+group = 'ing-sist'
+version = '0.0.1-SNAPSHOT'
+description = 'Auth Microservice for SnipperSearcher'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+	implementation 'org.jetbrains.kotlin:kotlin-reflect'
+	runtimeOnly 'org.postgresql:postgresql'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    detektPlugins "io.gitlab.arturbosch.detekt:detekt-formatting:1.23.6"
+}
+
+kotlin {
+	compilerOptions {
+		freeCompilerArgs.addAll '-Xjsr305=strict'
+	}
+}
+
+allOpen {
+	annotation 'jakarta.persistence.Entity'
+	annotation 'jakarta.persistence.MappedSuperclass'
+	annotation 'jakarta.persistence.Embeddable'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacoco {
+    toolVersion = "0.8.10"
+}
+
+tasks.jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+    doLast {
+        println "Coverage report generated: ${reports.html.outputLocation}/index.html"
+    }
+}
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.80
+            }
+        }
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+        }
+        rule {
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.60
+            }
+        }
+    }
+}
+
+tasks.check {
+    dependsOn jacocoTestCoverageVerification
+}
+
+spotless {
+    kotlin {
+        ktlint()
+    }
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config = files("$rootDir/config/detekt/detekt.yml")
+    reports {
+        html.required = true
+        xml.required = true
+        txt.required = true
+        sarif.required = true
+    }
+    ignoreFailures = false
+}
