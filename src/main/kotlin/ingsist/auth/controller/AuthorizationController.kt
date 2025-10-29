@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.*
-import ingsist.auth.dto.AuthorizationRequest
+import ingsist.auth.dto.AuthorizationRequestDto
 
 @RestController
 @RequestMapping("/permissions")
@@ -23,14 +23,14 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
     }
 
     @PostMapping
-    fun grant(@RequestBody request: AuthorizationRequest, @AuthenticationPrincipal jwt: Jwt): ResponseEntity<Unit> {
+    fun grant(@RequestBody request: AuthorizationRequestDto, @AuthenticationPrincipal jwt: Jwt): ResponseEntity<Unit> {
         val requestingUserId = jwt.subject // El usuario que está autenticado
         authorizationService.grantPermission(request.targetUserId, request.snippetId, request.permission, requestingUserId)
         return ResponseEntity.status(201).build()
     }
 
     @DeleteMapping
-    fun revoke(@RequestBody request: AuthorizationRequest, @AuthenticationPrincipal jwt: Jwt): ResponseEntity<Unit> {
+    fun revoke(@RequestBody request: AuthorizationRequestDto, @AuthenticationPrincipal jwt: Jwt): ResponseEntity<Unit> {
         val requestingUserId = jwt.subject
         authorizationService.revokePermission(request.targetUserId, request.snippetId, requestingUserId)
         return ResponseEntity.noContent().build()
