@@ -8,14 +8,15 @@ import java.util.Optional
 
 @Repository
 interface SnippetAuthorizationRepository : JpaRepository<SnippetsAuthorization, String> {
-    /**
-     * Busca un permiso específico para un usuario y un snippet.
-     */
-    fun findByUserIdAndSnippetId(userId: String, snippetId: String): Optional<SnippetsAuthorization>
+    fun findByUserIdAndSnippetId(
+        userId: String,
+        snippetId: String,
+    ): Optional<SnippetsAuthorization>
 
-    /**
-     * Verifica si un usuario es el último con permiso de escritura.
-     * Importante para evitar que un snippet quede huérfano (sin dueño).
-     */
-    fun countBySnippetIdAndPermission(snippetId: String, permission: AuthorizationTypes): Long
+    fun countBySnippetIdAndPermission(
+        snippetId: String,
+        permission: AuthorizationTypes,
+    ): Long
+
+    fun countBySnippetId(snippetId: String): Long
 }
