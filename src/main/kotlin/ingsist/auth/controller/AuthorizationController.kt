@@ -53,7 +53,7 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
         authorizationService.revokePermission(
             request.userId,
             request.snippetId,
-            requestingUserId
+            requestingUserId,
         )
         return ResponseEntity.noContent().build()
     }
