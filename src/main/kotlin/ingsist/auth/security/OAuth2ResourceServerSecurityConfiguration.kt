@@ -21,7 +21,7 @@ import org.springframework.security.web.SecurityFilterChain
 class OAuth2ResourceServerSecurityConfiguration(
     @Value("\${auth0.audience}")
     val audience: String,
-    @Value("\${AUTH_SERVER_URI}")
+    @Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
     val issuer: String,
 ) {
     @Bean

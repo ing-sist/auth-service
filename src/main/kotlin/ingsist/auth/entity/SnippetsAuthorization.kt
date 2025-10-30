@@ -15,7 +15,7 @@ import java.util.UUID
 data class SnippetsAuthorization(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: String = UUID.randomUUID().toString(),
+    var id: String? = null,
     val snippetId: String,
     val userId: String,
     val permission: AuthorizationTypes,

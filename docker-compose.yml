@@ -7,14 +7,13 @@ services:
     ports:
       - "${SERVER_PORT}:8080"
     environment:
-        DB_USER: ${DB_USER}
-        DB_PASSWORD: ${DB_PASSWORD}
-        DB_NAME: ${DB_NAME}
-        DB_HOST: ${DB_HOST}
-        DB_PORT: ${DB_PORT}
-        AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
-        AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
-        AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      AUTH_SERVER_URI: ${AUTH_SERVER_URI}
     depends_on:
       - db
 
@@ -24,9 +23,9 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     environment:
-        POSTGRES_USER: ${POSTGRES_USER}
-        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-        POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
 

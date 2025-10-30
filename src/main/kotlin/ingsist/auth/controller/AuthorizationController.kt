@@ -32,14 +32,14 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
         @RequestBody request: AuthorizationRequestDto,
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<Unit> {
-        val requestingUserId = jwt.subject
+        val requestingUserId = request.userId
         authorizationService.grantPermission(
-            request.targetUserId,
+            request.userId,
             request.snippetId,
             request.permission,
             requestingUserId,
         )
-        return ResponseEntity.ok().build()
+        return ResponseEntity.status(201).build()
     }
 
     @DeleteMapping
@@ -47,8 +47,12 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
         @RequestBody request: AuthorizationRequestDto,
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<Unit> {
-        val requestingUserId = jwt.subject
-        authorizationService.revokePermission(request.targetUserId, request.snippetId, requestingUserId)
+        val requestingUserId = request.userId
+        authorizationService.revokePermission(
+            request.userId,
+            request.snippetId,
+            requestingUserId
+        )
         return ResponseEntity.noContent().build()
     }
 }
