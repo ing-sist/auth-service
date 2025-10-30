@@ -30,6 +30,7 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
     @PostMapping
     fun grant(
         @RequestBody request: AuthorizationRequestDto,
+        @Suppress("UnusedParameter")
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<Unit> {
         val requestingUserId = request.userId
@@ -45,6 +46,7 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
     @DeleteMapping
     fun revoke(
         @RequestBody request: AuthorizationRequestDto,
+        @Suppress("UnusedParameter")
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<Unit> {
         val requestingUserId = request.userId
