@@ -1,6 +1,7 @@
 package ingsist.auth.controller
 
 import ingsist.auth.dto.GrantPermissionDto
+import ingsist.auth.entity.AuthorizationTypes
 import ingsist.auth.entity.SnippetsAuthorization
 import ingsist.auth.service.AuthorizationService
 import org.springframework.http.ResponseEntity
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/snippets")
 class SnippetAuthorizationController(private val authorizationService: AuthorizationService) {
-
     /**
      * Compartir un snippet (Otorgar permiso)
      * POST /snippets/{snippetId}/permissions
@@ -35,12 +35,13 @@ class SnippetAuthorizationController(private val authorizationService: Authoriza
         val requestingUserId = jwt.subject
         val targetUserId = request.userId
 
-        val newPermission = authorizationService.grantPermission(
-            targetUserId = targetUserId,
-            snippetId = snippetId,
-            permissionToGrant = request.permission,
-            requestingUserId = requestingUserId,
-        )
+        val newPermission =
+            authorizationService.grantPermission(
+                targetUserId = targetUserId,
+                snippetId = snippetId,
+                permissionToGrant = request.permission,
+                requestingUserId = requestingUserId,
+            )
         // Devuelve 201 Created con el recurso creado
         return ResponseEntity.status(201).body(newPermission)
     }
@@ -75,8 +76,10 @@ class SnippetAuthorizationController(private val authorizationService: Authoriza
      * GET /snippets/{snippetId}/permissions/{userId}
      *
      * Obtiene un recurso de "permiso" específico.
-     * Si no existe, el 'GlobalExceptionHandler' devolverá 404 Not Found.
-     * Esto permite al Snippet-Service verificar un permiso con un simple GET.
+     * Requiere que el usuario solicitante tenga al menos permiso READ en el snippet.
+     * Si no existe el permiso, el 'GlobalExceptionHandler' devolverá 404 Not Found.
+     * Si el usuario no está autorizado, devolverá 403 Forbidden.
+     * Esto permite al Snippet-Service verificar un permiso con un simple GET, pero de forma segura.
      */
     @GetMapping("/{snippetId}/permissions/{userId}")
     fun getPermissionForUserOnSnippet(
@@ -84,6 +87,11 @@ class SnippetAuthorizationController(private val authorizationService: Authoriza
         @PathVariable("userId") targetUserId: String,
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<SnippetsAuthorization> {
+        val requestingUserId = jwt.subject
+
+        // Validar que el usuario solicitante tenga al menos READ en el snippet
+        authorizationService.checkPermission(requestingUserId, snippetId, AuthorizationTypes.READ)
+
         val permission = authorizationService.getPermission(targetUserId, snippetId)
         return ResponseEntity.ok(permission)
     }

@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/users")
 class UserAuthorizationController(private val userAuthorizationService: UserAuthorizationService) {
-
     /**
      * Listar todos los permisos de un usuario.
      * GET /users/{userId}/permissions

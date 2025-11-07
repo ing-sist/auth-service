@@ -13,9 +13,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
-import org.mockito.Mockito.`when`
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import java.util.Optional
@@ -110,8 +110,8 @@ class AuthorizationServiceTest {
                     requestingUserId = requestingUserId,
                 )
             }
-
-        assertEquals("User $requestingUserId has no permissions on snippet $snippetId to grant access.", exception.message)
+        val message = "User $requestingUserId has no permissions on snippet $snippetId to grant access."
+        assertEquals(message, exception.message)
         verify(repository, never()).save(any())
     }
 

@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
-import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.jwt.Jwt
@@ -186,6 +186,7 @@ class SnippetAuthorizationControllerTest {
 
         assertEquals(HttpStatus.OK, response.statusCode)
         assertEquals(expectedPermission, response.body)
+        verify(authorizationService).checkPermission("user123", snippetId, AuthorizationTypes.READ)
     }
 
     @Test
@@ -202,6 +203,23 @@ class SnippetAuthorizationControllerTest {
             }
 
         assertEquals("No permission found for user user456 on snippet snippet-1", exception.message)
+        verify(authorizationService).checkPermission("user123", snippetId, AuthorizationTypes.READ)
+    }
+
+    @Test
+    fun `getPermissionForUserOnSnippet should throw UnauthorizedException when user lacks READ permission`() {
+        val snippetId = "snippet-1"
+        val targetUserId = "user456"
+
+        `when`(authorizationService.checkPermission("user123", snippetId, AuthorizationTypes.READ))
+            .thenThrow(UnauthorizedException("User user123 does not have READ permission on snippet snippet-1"))
+
+        val exception =
+            org.junit.jupiter.api.assertThrows<UnauthorizedException> {
+                controller.getPermissionForUserOnSnippet(snippetId, targetUserId, testJwt)
+            }
+
+        assertEquals("User user123 does not have READ permission on snippet snippet-1", exception.message)
     }
 
     @Test
