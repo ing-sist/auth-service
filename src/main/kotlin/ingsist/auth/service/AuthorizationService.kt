@@ -19,7 +19,7 @@ class AuthorizationService(private val repository: SnippetAuthorizationRepositor
         snippetId: String,
         permissionToGrant: AuthorizationTypes,
         requestingUserId: String,
-    ) {
+    ): SnippetsAuthorization {
         // 1. User can grant permissions
         validateUserCanGrantPermission(requestingUserId, snippetId)
 
@@ -27,8 +27,7 @@ class AuthorizationService(private val repository: SnippetAuthorizationRepositor
         val existingPermission = repository.findByUserIdAndSnippetId(targetUserId, snippetId)
         if (existingPermission.isPresent) {
             throw PermissionAlreadyExistsException(
-                "User " +
-                    "$targetUserId already has a permission on snippet $snippetId",
+                "User $targetUserId already has a permission on snippet $snippetId",
             )
         }
 
@@ -39,7 +38,7 @@ class AuthorizationService(private val repository: SnippetAuthorizationRepositor
                 snippetId = snippetId,
                 permission = permissionToGrant,
             )
-        repository.save(newPermission)
+        return repository.save(newPermission)
     }
 
     @Transactional
@@ -130,5 +129,34 @@ class AuthorizationService(private val repository: SnippetAuthorizationRepositor
 
     private fun isLastWriter(snippetId: String): Boolean {
         return repository.countBySnippetIdAndPermission(snippetId, AuthorizationTypes.WRITE) <= 1
+    }
+
+    /**
+     * NUEVO: Obtiene un permiso o falla (404).
+     * Reemplaza la necesidad de 'check'.
+     */
+    fun getPermission(
+        userId: String,
+        snippetId: String,
+    ): SnippetsAuthorization {
+        return repository.findByUserIdAndSnippetId(userId, snippetId)
+            .orElseThrow {
+                PermissionNotFoundException(
+                    "No permission found for user $userId on snippet $snippetId",
+                )
+            }
+    }
+
+    /**
+     * Obtiene todos los permisos para un snippet.
+     * Incluye una validación de seguridad.
+     */
+    fun getPermissionsForSnippet(
+        snippetId: String,
+        requestingUserId: String,
+    ): List<SnippetsAuthorization> {
+        // Seguridad: Solo un "owner" (WRITE) puede ver la lista de permisos
+        validateUserCanRevokePermission(requestingUserId, snippetId)
+        return repository.findAllBySnippetId(snippetId)
     }
 }

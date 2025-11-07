@@ -19,4 +19,8 @@ interface SnippetAuthorizationRepository : JpaRepository<SnippetsAuthorization, 
     ): Long
 
     fun countBySnippetId(snippetId: String): Long
+
+    fun findAllBySnippetId(snippetId: String): List<SnippetsAuthorization>
+
+    fun findAllByUserId(userId: String): List<SnippetsAuthorization>
 }
