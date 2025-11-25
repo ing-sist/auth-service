@@ -122,3 +122,12 @@ detekt {
     }
     ignoreFailures = false
 }
+
+tasks.register("installGitHooks", Exec) {
+    commandLine "bash", "./scripts/bootstrap.sh"
+}
+
+gradle.projectsEvaluated {
+    tasks.getByName("build").dependsOn("installGitHooks")
+}
+
