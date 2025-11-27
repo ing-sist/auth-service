@@ -1,6 +1,6 @@
 package ingsist.auth.controller
 
-import ingsist.auth.entity.SnippetsAuthorization
+import ingsist.auth.dto.SnippetAuthorizationDto
 import ingsist.auth.exceptions.UnauthorizedException
 import ingsist.auth.service.UserAuthorizationService
 import org.springframework.http.ResponseEntity
@@ -22,7 +22,7 @@ class UserAuthorizationController(private val userAuthorizationService: UserAuth
     fun getPermissionsForUser(
         @PathVariable userId: String,
         @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<List<SnippetsAuthorization>> {
+    ): ResponseEntity<List<SnippetAuthorizationDto>> {
         val requestingUserId = jwt.subject
         if (userId != requestingUserId) {
             throw UnauthorizedException("No puedes ver los permisos de otro usuario.")
@@ -31,4 +31,19 @@ class UserAuthorizationController(private val userAuthorizationService: UserAuth
         val permissions = userAuthorizationService.getPermissionsForUser(userId)
         return ResponseEntity.ok(permissions)
     }
+    /**
+     @GetMapping()
+     fun getAllUsersWithoutPermissionsForSnippet(
+     @PathVariable snippetId: String,
+     @AuthenticationPrincipal jwt: Jwt,
+     ): ResponseEntity<List<AuthUsersDto>> {
+     val requestingUserId = jwt.subject
+     if (!userAuthorizationService.userHasPermission(requestingUserId, snippetId, "READ")) {
+     throw UnauthorizedException("No tienes permiso para ver los usuarios con acceso a este snippet.")
+     }
+
+     val users = userAuthorizationService.getAllUsersWithReadPermissionsForSnippet(snippetId)
+     return ResponseEntity.ok(users)
+     }
+     **/
 }

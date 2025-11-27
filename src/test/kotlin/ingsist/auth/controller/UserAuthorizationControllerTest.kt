@@ -1,8 +1,8 @@
 package ingsist.auth.controller
 
+import ingsist.auth.dto.SnippetAuthorizationDto
 import ingsist.auth.entity.AuthorizationTypes.READ
 import ingsist.auth.entity.AuthorizationTypes.WRITE
-import ingsist.auth.entity.SnippetsAuthorization
 import ingsist.auth.exceptions.UnauthorizedException
 import ingsist.auth.service.UserAuthorizationService
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -44,22 +44,24 @@ class UserAuthorizationControllerTest {
         val userJwt = jwtForUser(USER_ID)
         val otherUserJwt = jwtForUser(OTHER_USER_ID)
 
-        fun aPermission(
+        fun aPermissionDto(
             id: String,
             snippetId: String,
             userId: String = USER_ID,
+            userEmail: String = "user@example.com",
             permission: ingsist.auth.entity.AuthorizationTypes = READ,
-        ) = SnippetsAuthorization(
+        ) = SnippetAuthorizationDto(
             id = id,
             snippetId = snippetId,
             userId = userId,
+            userEmail = userEmail,
             permission = permission,
         )
 
         fun multiplePermissions(userId: String = USER_ID) =
             listOf(
-                aPermission(id = "perm-1", snippetId = "snippet-1", userId = userId, permission = READ),
-                aPermission(id = "perm-2", snippetId = "snippet-2", userId = userId, permission = WRITE),
+                aPermissionDto(id = "perm-1", snippetId = "snippet-1", userId = userId, permission = READ),
+                aPermissionDto(id = "perm-2", snippetId = "snippet-2", userId = userId, permission = WRITE),
             )
     }
 
@@ -111,7 +113,7 @@ class UserAuthorizationControllerTest {
             fun `returns single permission`() {
                 val singlePermission =
                     listOf(
-                        aPermission(id = "perm-1", snippetId = "snippet-1", permission = WRITE),
+                        aPermissionDto(id = "perm-1", snippetId = "snippet-1", permission = WRITE),
                     )
                 givenUserPermissions(USER_ID, singlePermission)
 
@@ -126,9 +128,9 @@ class UserAuthorizationControllerTest {
             fun `returns mixed permission types`() {
                 val mixedPermissions =
                     listOf(
-                        aPermission(id = "perm-1", snippetId = "snippet-1", permission = READ),
-                        aPermission(id = "perm-2", snippetId = "snippet-2", permission = WRITE),
-                        aPermission(id = "perm-3", snippetId = "snippet-3", permission = READ),
+                        aPermissionDto(id = "perm-1", snippetId = "snippet-1", permission = READ),
+                        aPermissionDto(id = "perm-2", snippetId = "snippet-2", permission = WRITE),
+                        aPermissionDto(id = "perm-3", snippetId = "snippet-3", permission = READ),
                     )
                 givenUserPermissions(USER_ID, mixedPermissions)
 
@@ -210,7 +212,7 @@ class UserAuthorizationControllerTest {
     // Helper methods - DSL Style
     private fun givenUserPermissions(
         userId: String,
-        permissions: List<SnippetsAuthorization>,
+        permissions: List<SnippetAuthorizationDto>,
     ) {
         `when`(userAuthorizationService.getPermissionsForUser(userId)).thenReturn(permissions)
     }

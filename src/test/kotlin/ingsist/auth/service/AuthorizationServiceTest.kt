@@ -31,6 +31,9 @@ class AuthorizationServiceTest {
     @Mock
     private lateinit var repository: SnippetAuthorizationRepository
 
+    @Mock
+    private lateinit var auth0ManagementService: Auth0ManagementService
+
     @InjectMocks
     private lateinit var service: AuthorizationService
 
@@ -507,11 +510,14 @@ class AuthorizationServiceTest {
 
             givenUserHasPermission(OWNER_ID, ownerPerm)
             `when`(repository.findAllBySnippetId(SNIPPET_ID)).thenReturn(allPermissions)
+            givenEmailLookup(OWNER_ID, "owner@example.com")
+            givenEmailLookup(TARGET_USER_ID, "target@example.com")
 
             val result = service.getPermissionsForSnippet(SNIPPET_ID, OWNER_ID)
 
             assertEquals(2, result.size)
-            assertEquals(allPermissions, result)
+            assertEquals("owner@example.com", result[0].userEmail)
+            assertEquals("target@example.com", result[1].userEmail)
         }
 
         @Test
@@ -556,6 +562,55 @@ class AuthorizationServiceTest {
                 exception.message,
             )
         }
+
+        @Test
+        @DisplayName("should map entity permissions to DTOs correctly")
+        fun `maps permissions to dtos correctly`() {
+            val ownerPerm = ownerPermission()
+            val readerPerm = readerPermission()
+            val allPermissions = listOf(ownerPerm, readerPerm)
+
+            givenUserHasPermission(OWNER_ID, ownerPerm)
+            `when`(repository.findAllBySnippetId(SNIPPET_ID)).thenReturn(allPermissions)
+            givenEmailLookup(OWNER_ID, "owner@example.com")
+            givenEmailLookup(TARGET_USER_ID, "target@example.com")
+
+            val result = service.getPermissionsForSnippet(SNIPPET_ID, OWNER_ID)
+
+            assertEquals(2, result.size)
+
+            val ownerDto = result[0]
+            assertEquals(ownerPerm.id, ownerDto.id)
+            assertEquals(ownerPerm.snippetId, ownerDto.snippetId)
+            assertEquals(ownerPerm.userId, ownerDto.userId)
+            assertEquals("owner@example.com", ownerDto.userEmail)
+            assertEquals(ownerPerm.permission, ownerDto.permission)
+
+            val readerDto = result[1]
+            assertEquals(readerPerm.id, readerDto.id)
+            assertEquals(readerPerm.snippetId, readerDto.snippetId)
+            assertEquals(readerPerm.userId, readerDto.userId)
+            assertEquals("target@example.com", readerDto.userEmail)
+            assertEquals(readerPerm.permission, readerDto.permission)
+        }
+
+        @Test
+        @DisplayName("should fetch email for each permission in list")
+        fun `fetches email for each permission`() {
+            val ownerPerm = ownerPermission()
+            val readerPerm = readerPermission()
+            val allPermissions = listOf(ownerPerm, readerPerm)
+
+            givenUserHasPermission(OWNER_ID, ownerPerm)
+            `when`(repository.findAllBySnippetId(SNIPPET_ID)).thenReturn(allPermissions)
+            givenEmailLookup(OWNER_ID, "owner@example.com")
+            givenEmailLookup(TARGET_USER_ID, "target@example.com")
+
+            service.getPermissionsForSnippet(SNIPPET_ID, OWNER_ID)
+
+            verify(auth0ManagementService).getUserEmail(OWNER_ID)
+            verify(auth0ManagementService).getUserEmail(TARGET_USER_ID)
+        }
     }
 
     // Helper methods - DSL Style
@@ -591,5 +646,12 @@ class AuthorizationServiceTest {
 
     private fun givenSaveReturnsInput() {
         `when`(repository.save(any<SnippetsAuthorization>())).thenAnswer { it.arguments[0] }
+    }
+
+    private fun givenEmailLookup(
+        userId: String,
+        email: String,
+    ) {
+        `when`(auth0ManagementService.getUserEmail(userId)).thenReturn(email)
     }
 }

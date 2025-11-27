@@ -1,6 +1,7 @@
 package ingsist.auth.controller
 
 import ingsist.auth.dto.GrantPermissionDto
+import ingsist.auth.dto.SnippetAuthorizationDto
 import ingsist.auth.entity.AuthorizationTypes
 import ingsist.auth.entity.AuthorizationTypes.READ
 import ingsist.auth.entity.AuthorizationTypes.WRITE
@@ -390,8 +391,20 @@ class SnippetAuthorizationControllerTest {
             fun `returns ok with permissions list`() {
                 val permissions =
                     listOf(
-                        aPermission(id = "perm-1", userId = OWNER_ID, permission = WRITE),
-                        aPermission(id = "perm-2", userId = TARGET_USER_ID, permission = READ),
+                        SnippetAuthorizationDto(
+                            id = "perm-1",
+                            snippetId = SNIPPET_ID,
+                            userId = OWNER_ID,
+                            userEmail = "owner@example.com",
+                            permission = WRITE,
+                        ),
+                        SnippetAuthorizationDto(
+                            id = "perm-2",
+                            snippetId = SNIPPET_ID,
+                            userId = TARGET_USER_ID,
+                            userEmail = "target@example.com",
+                            permission = READ,
+                        ),
                     )
                 `when`(authorizationService.getPermissionsForSnippet(SNIPPET_ID, OWNER_ID))
                     .thenReturn(permissions)

@@ -1,6 +1,7 @@
 // src/main/kotlin/ingsist/auth/service/AuthorizationService.kt
 package ingsist.auth.service
 
+import ingsist.auth.dto.SnippetAuthorizationDto
 import ingsist.auth.entity.AuthorizationTypes
 import ingsist.auth.entity.SnippetsAuthorization
 import ingsist.auth.exceptions.CannotRevokeLastWritePermissionException
@@ -12,7 +13,10 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class AuthorizationService(private val repository: SnippetAuthorizationRepository) {
+class AuthorizationService(
+    private val repository: SnippetAuthorizationRepository,
+    private val auth0ManagementService: Auth0ManagementService,
+) {
     @Transactional
     fun grantPermission(
         targetUserId: String,
@@ -154,9 +158,22 @@ class AuthorizationService(private val repository: SnippetAuthorizationRepositor
     fun getPermissionsForSnippet(
         snippetId: String,
         requestingUserId: String,
-    ): List<SnippetsAuthorization> {
+    ): List<SnippetAuthorizationDto> {
         // Seguridad: Solo un "owner" (WRITE) puede ver la lista de permisos
         validateUserCanRevokePermission(requestingUserId, snippetId)
-        return repository.findAllBySnippetId(snippetId)
+        val permissions = repository.findAllBySnippetId(snippetId)
+
+        // Mapeamos cada permiso buscando el email
+        return permissions.map { permission ->
+            val email = auth0ManagementService.getUserEmail(permission.userId)
+
+            SnippetAuthorizationDto(
+                id = permission.id,
+                snippetId = permission.snippetId,
+                userId = permission.userId,
+                userEmail = email,
+                permission = permission.permission,
+            )
+        }
     }
 }

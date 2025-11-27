@@ -1,6 +1,7 @@
 package ingsist.auth.controller
 
 import ingsist.auth.dto.GrantPermissionDto
+import ingsist.auth.dto.SnippetAuthorizationDto
 import ingsist.auth.entity.AuthorizationTypes
 import ingsist.auth.entity.SnippetsAuthorization
 import ingsist.auth.service.AuthorizationService
@@ -104,7 +105,7 @@ class SnippetAuthorizationController(private val authorizationService: Authoriza
     fun getPermissionsForSnippet(
         @PathVariable snippetId: String,
         @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<List<SnippetsAuthorization>> {
+    ): ResponseEntity<List<SnippetAuthorizationDto>> {
         val requestingUserId = jwt.subject
 
         val permissions = authorizationService.getPermissionsForSnippet(snippetId, requestingUserId)
