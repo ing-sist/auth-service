@@ -7,3 +7,5 @@ class PermissionAlreadyExistsException(message: String) : RuntimeException(messa
 class PermissionNotFoundException(message: String) : RuntimeException(message)
 
 class CannotRevokeLastWritePermissionException(message: String) : RuntimeException(message)
+
+class Auth0TokenException(message: String) : RuntimeException(message)

@@ -204,6 +204,7 @@ class AuthExceptionsTest {
                     PermissionAlreadyExistsException("test"),
                     PermissionNotFoundException("test"),
                     CannotRevokeLastWritePermissionException("test"),
+                    Auth0TokenException("test"),
                 )
 
             exceptions.forEach { exception ->
@@ -211,6 +212,48 @@ class AuthExceptionsTest {
                     "${exception::class.simpleName} should be Exception"
                 }
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("Auth0TokenException")
+    inner class Auth0TokenExceptionTests {
+        @Test
+        @DisplayName("should create exception with message")
+        fun `creates with message`() {
+            val message = "Could not retrieve Access Token from Auth0"
+            val exception = Auth0TokenException(message)
+
+            assertEquals(message, exception.message)
+        }
+
+        @Test
+        @DisplayName("should be throwable")
+        fun `is throwable`() {
+            val exception =
+                assertThrows<Auth0TokenException> {
+                    throw Auth0TokenException("Token request failed")
+                }
+
+            assertNotNull(exception)
+            assertEquals("Token request failed", exception.message)
+        }
+
+        @Test
+        @DisplayName("should extend RuntimeException")
+        fun `extends runtime exception`() {
+            val exception = Auth0TokenException("test")
+
+            assert(exception is RuntimeException)
+        }
+
+        @Test
+        @DisplayName("should handle detailed error messages")
+        fun `handles detailed error messages`() {
+            val message = "Failed to retrieve M2M token: HTTP 401 Unauthorized"
+            val exception = Auth0TokenException(message)
+
+            assertEquals(message, exception.message)
         }
     }
 }

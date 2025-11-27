@@ -22,6 +22,9 @@ class UserAuthorizationServiceTest {
     @Mock
     private lateinit var repository: SnippetAuthorizationRepository
 
+    @Mock
+    private lateinit var auth0ManagementService: Auth0ManagementService
+
     @InjectMocks
     private lateinit var service: UserAuthorizationService
 
@@ -61,13 +64,14 @@ class UserAuthorizationServiceTest {
                 // Given
                 val expectedPermissions = multiplePermissions()
                 givenUserPermissions(USER_ID, expectedPermissions)
+                givenEmailLookup(USER_ID, "user@example.com")
 
                 // When
                 val result = service.getPermissionsForUser(USER_ID)
 
                 // Then
-                assertEquals(expectedPermissions, result)
                 assertEquals(3, result.size)
+                assertEquals("user@example.com", result[0].userEmail)
                 verify(repository).findAllByUserId(USER_ID)
             }
 
@@ -79,11 +83,13 @@ class UserAuthorizationServiceTest {
                         aPermission(id = "perm-1", snippetId = "snippet-1", permission = WRITE),
                     )
                 givenUserPermissions(USER_ID, singlePermission)
+                givenEmailLookup(USER_ID, "user@example.com")
 
                 val result = service.getPermissionsForUser(USER_ID)
 
                 assertEquals(1, result.size)
                 assertEquals(USER_ID, result[0].userId)
+                assertEquals("user@example.com", result[0].userEmail)
                 assertEquals(WRITE, result[0].permission)
             }
 
@@ -95,6 +101,7 @@ class UserAuthorizationServiceTest {
                         aPermission(id = "perm-1", snippetId = "snippet-1", userId = USER_ID),
                     )
                 givenUserPermissions(USER_ID, userPermissions)
+                givenEmailLookup(USER_ID, "user@example.com")
 
                 val result = service.getPermissionsForUser(USER_ID)
 
@@ -111,6 +118,7 @@ class UserAuthorizationServiceTest {
                         aPermission(id = "perm-2", snippetId = "snippet-2", permission = WRITE),
                     )
                 givenUserPermissions(USER_ID, mixedPermissions)
+                givenEmailLookup(USER_ID, "user@example.com")
 
                 val result = service.getPermissionsForUser(USER_ID)
 
@@ -159,6 +167,7 @@ class UserAuthorizationServiceTest {
                         permission = WRITE,
                     )
                 givenUserPermissions(USER_ID, listOf(permission))
+                givenEmailLookup(USER_ID, "user@example.com")
 
                 val result = service.getPermissionsForUser(USER_ID)
 
@@ -171,10 +180,64 @@ class UserAuthorizationServiceTest {
             fun `delegates to repository correctly`() {
                 val permissions = multiplePermissions()
                 givenUserPermissions(USER_ID, permissions)
+                givenEmailLookup(USER_ID, "user@example.com")
 
                 service.getPermissionsForUser(USER_ID)
 
                 verify(repository).findAllByUserId(USER_ID)
+            }
+
+            @Test
+            @DisplayName("should fetch email for each permission")
+            fun `fetches email for each permission`() {
+                val permissions = multiplePermissions()
+                givenUserPermissions(USER_ID, permissions)
+                givenEmailLookup(USER_ID, "user@example.com")
+
+                val result = service.getPermissionsForUser(USER_ID)
+
+                assertEquals(3, result.size)
+                result.forEach { dto ->
+                    assertEquals("user@example.com", dto.userEmail)
+                }
+                verify(auth0ManagementService, org.mockito.Mockito.times(3)).getUserEmail(USER_ID)
+            }
+
+            @Test
+            @DisplayName("should map all entity fields to DTO")
+            fun `maps all entity fields to dto`() {
+                val permission = aPermission(id = "perm-1", snippetId = "snippet-1", permission = READ)
+                givenUserPermissions(USER_ID, listOf(permission))
+                givenEmailLookup(USER_ID, "user@example.com")
+
+                val result = service.getPermissionsForUser(USER_ID)
+
+                assertEquals(1, result.size)
+                val dto = result[0]
+                assertEquals(permission.id, dto.id)
+                assertEquals(permission.snippetId, dto.snippetId)
+                assertEquals(permission.userId, dto.userId)
+                assertEquals("user@example.com", dto.userEmail)
+                assertEquals(permission.permission, dto.permission)
+            }
+
+            @Test
+            @DisplayName("should handle different users in permissions list")
+            fun `handles different users in permissions`() {
+                val permissions =
+                    listOf(
+                        aPermission(id = "perm-1", snippetId = "snippet-1", userId = USER_ID),
+                        aPermission(id = "perm-2", snippetId = "snippet-2", userId = USER_ID),
+                    )
+                givenUserPermissions(USER_ID, permissions)
+                givenEmailLookup(USER_ID, "user@example.com")
+
+                val result = service.getPermissionsForUser(USER_ID)
+
+                assertEquals(2, result.size)
+                result.forEach { dto ->
+                    assertEquals(USER_ID, dto.userId)
+                }
             }
         }
     }
@@ -185,5 +248,12 @@ class UserAuthorizationServiceTest {
         permissions: List<SnippetsAuthorization>,
     ) {
         `when`(repository.findAllByUserId(userId)).thenReturn(permissions)
+    }
+
+    private fun givenEmailLookup(
+        userId: String,
+        email: String,
+    ) {
+        `when`(auth0ManagementService.getUserEmail(userId)).thenReturn(email)
     }
 }
