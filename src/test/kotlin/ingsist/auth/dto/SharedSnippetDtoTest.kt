@@ -7,8 +7,8 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
-@DisplayName("SnippetAuthorizationDto")
-class SnippetAuthorizationDtoTest {
+@DisplayName("SharedSnippetDto")
+class SharedSnippetDtoTest {
     companion object {
         const val SNIPPET_ID = "snippet-123"
         const val USER_ID = "user-456"
@@ -21,7 +21,7 @@ class SnippetAuthorizationDtoTest {
             userId: String = USER_ID,
             userEmail: String = USER_EMAIL,
             permission: AuthorizationTypes = AuthorizationTypes.READ,
-        ) = SnippetAuthorizationDto(
+        ) = SharedSnippetDto(
             id = id,
             snippetId = snippetId,
             userId = userId,
@@ -249,7 +249,7 @@ class SnippetAuthorizationDtoTest {
             val dto = aDto()
             val toString = dto.toString()
 
-            assert(toString.contains("SnippetAuthorizationDto"))
+            assert(toString.contains("SharedSnippetDto"))
             assert(toString.contains(SNIPPET_ID))
             assert(toString.contains(USER_ID))
             assert(toString.contains(USER_EMAIL))

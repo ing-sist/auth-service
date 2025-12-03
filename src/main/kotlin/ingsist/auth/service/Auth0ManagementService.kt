@@ -1,6 +1,7 @@
 package ingsist.auth.service
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import ingsist.auth.dto.AuthUsersDto
 import ingsist.auth.exceptions.Auth0TokenException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
@@ -47,6 +48,29 @@ class Auth0ManagementService(
         }
     }
 
+    fun searchUsers(emailFragment: String): List<AuthUsersDto> {
+        return try {
+            val token = getManagementApiToken()
+            val authDomainUrl = if (domain.startsWith("http")) domain else "https://$domain"
+
+            val query = "email:*$emailFragment*"
+
+            val response =
+                client.get()
+                    .uri("$authDomainUrl/api/v2/users?q={q}&search_engine=v3", mapOf("q" to query))
+                    .header("Authorization", "Bearer $token")
+                    .retrieve()
+                    .body(Array<Auth0UserResponse>::class.java)
+
+            response?.map {
+                AuthUsersDto(it.userId ?: "", it.email ?: "")
+            }?.toList() ?: emptyList()
+        } catch (e: RestClientException) {
+            println("Error searching users: ${e.message}")
+            emptyList()
+        }
+    }
+
     private fun getManagementApiToken(): String {
         val authDomainUrl = if (domain.startsWith("http")) domain else "https://$domain"
 
@@ -75,6 +99,7 @@ class Auth0ManagementService(
     )
 
     data class Auth0UserResponse(
+        @JsonProperty("user_id") val userId: String? = null,
         val email: String? = null,
         val name: String? = null,
     )

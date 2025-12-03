@@ -2,7 +2,7 @@ package ingsist.auth.dto
 
 import ingsist.auth.entity.AuthorizationTypes
 
-data class SnippetAuthorizationDto(
+data class SharedSnippetDto(
     val id: String?,
     val snippetId: String,
     val userId: String,

@@ -4,9 +4,7 @@ import ingsist.auth.entity.AuthorizationTypes
 import ingsist.auth.entity.AuthorizationTypes.READ
 import ingsist.auth.entity.AuthorizationTypes.WRITE
 import ingsist.auth.entity.SnippetsAuthorization
-import ingsist.auth.exceptions.CannotRevokeLastWritePermissionException
 import ingsist.auth.exceptions.PermissionAlreadyExistsException
-import ingsist.auth.exceptions.PermissionNotFoundException
 import ingsist.auth.exceptions.UnauthorizedException
 import ingsist.auth.repository.SnippetAuthorizationRepository
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -26,8 +24,8 @@ import org.mockito.kotlin.any
 import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
-@DisplayName("AuthorizationService")
-class AuthorizationServiceTest {
+@DisplayName("PermissionService")
+class PermissionServiceTest {
     @Mock
     private lateinit var repository: SnippetAuthorizationRepository
 
@@ -35,7 +33,7 @@ class AuthorizationServiceTest {
     private lateinit var auth0ManagementService: Auth0ManagementService
 
     @InjectMocks
-    private lateinit var service: AuthorizationService
+    private lateinit var service: PermissionService
 
     // Test Data Builders - DSL Style
     companion object {
@@ -243,102 +241,28 @@ class AuthorizationServiceTest {
     }
 
     @Nested
-    @DisplayName("revokePermission")
-    inner class RevokePermissionTests {
+    @DisplayName("deleteSnippet")
+    inner class DeleteSnippetTests {
         @Nested
-        @DisplayName("when owner revokes permission")
-        inner class ValidRevokeScenarios {
+        @DisplayName("when owner deletes snippet")
+        inner class ValidDeleteScenarios {
             @Test
-            @DisplayName("should successfully revoke READ permission")
-            fun `revokes read permission`() {
-                val targetPermission = readerPermission()
+            @DisplayName("should successfully delete all permissions")
+            fun `deletes all permissions`() {
                 givenUserHasPermission(OWNER_ID, ownerPermission())
-                givenUserHasPermission(TARGET_USER_ID, targetPermission)
 
-                service.revokePermission(
-                    targetUserId = TARGET_USER_ID,
+                service.deleteSnippet(
                     snippetId = SNIPPET_ID,
                     requestingUserId = OWNER_ID,
                 )
 
-                verify(repository).delete(targetPermission)
-            }
-
-            @Test
-            @DisplayName("should revoke WRITE permission when multiple writers exist")
-            fun `revokes write when multiple writers exist`() {
-                val targetPermission =
-                    aPermission(
-                        id = "target-perm",
-                        userId = TARGET_USER_ID,
-                        permission = WRITE,
-                    )
-                givenUserHasPermission(OWNER_ID, ownerPermission())
-                givenUserHasPermission(TARGET_USER_ID, targetPermission)
-                givenWritePermissionCount(count = 2)
-
-                service.revokePermission(
-                    targetUserId = TARGET_USER_ID,
-                    snippetId = SNIPPET_ID,
-                    requestingUserId = OWNER_ID,
-                )
-
-                verify(repository).delete(targetPermission)
+                verify(repository).deleteAllBySnippetId(SNIPPET_ID)
             }
         }
 
         @Nested
-        @DisplayName("when revoke is invalid")
-        inner class InvalidRevokeScenarios {
-            @Test
-            @DisplayName("should reject when target permission does not exist")
-            fun `rejects when permission not found`() {
-                givenUserHasPermission(OWNER_ID, ownerPermission())
-                givenUserHasNoPermission(TARGET_USER_ID)
-
-                val exception =
-                    assertThrows<PermissionNotFoundException> {
-                        service.revokePermission(
-                            targetUserId = TARGET_USER_ID,
-                            snippetId = SNIPPET_ID,
-                            requestingUserId = OWNER_ID,
-                        )
-                    }
-
-                assertEquals(
-                    "No permission found for user $TARGET_USER_ID on snippet $SNIPPET_ID",
-                    exception.message,
-                )
-            }
-
-            @Test
-            @DisplayName("should reject when revoking last WRITE permission")
-            fun `rejects revoking last write permission`() {
-                val targetPermission =
-                    aPermission(
-                        id = "target-perm",
-                        userId = TARGET_USER_ID,
-                        permission = WRITE,
-                    )
-                givenUserHasPermission(OWNER_ID, ownerPermission())
-                givenUserHasPermission(TARGET_USER_ID, targetPermission)
-                givenWritePermissionCount(count = 1)
-
-                val exception =
-                    assertThrows<CannotRevokeLastWritePermissionException> {
-                        service.revokePermission(
-                            targetUserId = TARGET_USER_ID,
-                            snippetId = SNIPPET_ID,
-                            requestingUserId = OWNER_ID,
-                        )
-                    }
-
-                assertEquals(
-                    "Cannot revoke the last WRITE permission for snippet $SNIPPET_ID",
-                    exception.message,
-                )
-            }
-
+        @DisplayName("when delete is invalid")
+        inner class InvalidDeleteScenarios {
             @Test
             @DisplayName("should reject when requesting user lacks WRITE permission")
             fun `rejects when requester lacks write`() {
@@ -346,8 +270,7 @@ class AuthorizationServiceTest {
 
                 val exception =
                     assertThrows<UnauthorizedException> {
-                        service.revokePermission(
-                            targetUserId = TARGET_USER_ID,
+                        service.deleteSnippet(
                             snippetId = SNIPPET_ID,
                             requestingUserId = OWNER_ID,
                         )
@@ -366,8 +289,7 @@ class AuthorizationServiceTest {
 
                 val exception =
                     assertThrows<UnauthorizedException> {
-                        service.revokePermission(
-                            targetUserId = TARGET_USER_ID,
+                        service.deleteSnippet(
                             snippetId = SNIPPET_ID,
                             requestingUserId = OWNER_ID,
                         )
@@ -382,119 +304,38 @@ class AuthorizationServiceTest {
     }
 
     @Nested
-    @DisplayName("checkPermission")
-    inner class CheckPermissionTests {
-        @Nested
-        @DisplayName("when user has sufficient permission")
-        inner class SufficientPermission {
-            @Test
-            @DisplayName("should pass when WRITE user checks for READ")
-            fun `write satisfies read requirement`() {
-                givenUserHasPermission(OWNER_ID, ownerPermission())
-
-                // Should not throw
-                service.checkPermission(OWNER_ID, SNIPPET_ID, READ)
-            }
-
-            @Test
-            @DisplayName("should pass when WRITE user checks for WRITE")
-            fun `write satisfies write requirement`() {
-                givenUserHasPermission(OWNER_ID, ownerPermission())
-
-                service.checkPermission(OWNER_ID, SNIPPET_ID, WRITE)
-            }
-
-            @Test
-            @DisplayName("should pass when READ user checks for READ")
-            fun `read satisfies read requirement`() {
-                givenUserHasPermission(OWNER_ID, readerPermission(userId = OWNER_ID))
-
-                service.checkPermission(OWNER_ID, SNIPPET_ID, READ)
-            }
-        }
-
-        @Nested
-        @DisplayName("when user lacks permission")
-        inner class InsufficientPermission {
-            @Test
-            @DisplayName("should reject when READ user checks for WRITE")
-            fun `read does not satisfy write requirement`() {
-                givenUserHasPermission(OWNER_ID, readerPermission(userId = OWNER_ID))
-
-                val exception =
-                    assertThrows<UnauthorizedException> {
-                        service.checkPermission(OWNER_ID, SNIPPET_ID, WRITE)
-                    }
-
-                assertEquals(
-                    "User $OWNER_ID does not have WRITE permission on snippet $SNIPPET_ID",
-                    exception.message,
-                )
-            }
-
-            @Test
-            @DisplayName("should reject when user has no permission and checks for READ")
-            fun `no permission fails read check`() {
-                givenUserHasNoPermission(OWNER_ID)
-
-                val exception =
-                    assertThrows<UnauthorizedException> {
-                        service.checkPermission(OWNER_ID, SNIPPET_ID, READ)
-                    }
-
-                assertEquals(
-                    "User $OWNER_ID does not have READ permission on snippet $SNIPPET_ID",
-                    exception.message,
-                )
-            }
-
-            @Test
-            @DisplayName("should reject when user has no permission and checks for WRITE")
-            fun `no permission fails write check`() {
-                givenUserHasNoPermission(OWNER_ID)
-
-                val exception =
-                    assertThrows<UnauthorizedException> {
-                        service.checkPermission(OWNER_ID, SNIPPET_ID, WRITE)
-                    }
-
-                assertEquals(
-                    "User $OWNER_ID does not have WRITE permission on snippet $SNIPPET_ID",
-                    exception.message,
-                )
-            }
-        }
-    }
-
-    @Nested
-    @DisplayName("getPermission")
-    inner class GetPermissionTests {
+    @DisplayName("hasPermission")
+    inner class HasPermissionTests {
         @Test
-        @DisplayName("should return permission when it exists")
-        fun `returns existing permission`() {
-            val expectedPermission = readerPermission()
-            givenUserHasPermission(TARGET_USER_ID, expectedPermission)
-
-            val result = service.getPermission(TARGET_USER_ID, SNIPPET_ID)
-
-            assertEquals(expectedPermission, result)
-            assertEquals(READ, result.permission)
+        @DisplayName("should return true when user has exact permission")
+        fun `returns true for exact permission`() {
+            givenUserHasPermission(OWNER_ID, ownerPermission())
+            val result = service.hasPermission(OWNER_ID, SNIPPET_ID, WRITE)
+            assertEquals(true, result)
         }
 
         @Test
-        @DisplayName("should throw PermissionNotFoundException when permission does not exist")
-        fun `throws when permission not found`() {
+        @DisplayName("should return true when user has higher permission")
+        fun `returns true for higher permission`() {
+            givenUserHasPermission(OWNER_ID, ownerPermission())
+            val result = service.hasPermission(OWNER_ID, SNIPPET_ID, READ)
+            assertEquals(true, result)
+        }
+
+        @Test
+        @DisplayName("should return false when user lacks permission")
+        fun `returns false when user lacks permission`() {
+            givenUserHasPermission(TARGET_USER_ID, readerPermission())
+            val result = service.hasPermission(TARGET_USER_ID, SNIPPET_ID, WRITE)
+            assertEquals(false, result)
+        }
+
+        @Test
+        @DisplayName("should return false when user has no permission")
+        fun `returns false when no permission`() {
             givenUserHasNoPermission(TARGET_USER_ID)
-
-            val exception =
-                assertThrows<PermissionNotFoundException> {
-                    service.getPermission(TARGET_USER_ID, SNIPPET_ID)
-                }
-
-            assertEquals(
-                "No permission found for user $TARGET_USER_ID on snippet $SNIPPET_ID",
-                exception.message,
-            )
+            val result = service.hasPermission(TARGET_USER_ID, SNIPPET_ID, READ)
+            assertEquals(false, result)
         }
     }
 
@@ -638,10 +479,6 @@ class AuthorizationServiceTest {
 
     private fun givenSnippetHasExistingPermissions(count: Long) {
         `when`(repository.countBySnippetId(SNIPPET_ID)).thenReturn(count)
-    }
-
-    private fun givenWritePermissionCount(count: Long) {
-        `when`(repository.countBySnippetIdAndPermission(SNIPPET_ID, WRITE)).thenReturn(count)
     }
 
     private fun givenSaveReturnsInput() {

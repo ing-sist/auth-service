@@ -1,22 +1,29 @@
 // src/main/kotlin/ingsist/auth/service/AuthorizationService.kt
 package ingsist.auth.service
 
-import ingsist.auth.dto.SnippetAuthorizationDto
+import ingsist.auth.dto.SharedSnippetDto
 import ingsist.auth.entity.AuthorizationTypes
 import ingsist.auth.entity.SnippetsAuthorization
-import ingsist.auth.exceptions.CannotRevokeLastWritePermissionException
 import ingsist.auth.exceptions.PermissionAlreadyExistsException
-import ingsist.auth.exceptions.PermissionNotFoundException
 import ingsist.auth.exceptions.UnauthorizedException
 import ingsist.auth.repository.SnippetAuthorizationRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class AuthorizationService(
+class PermissionService(
     private val repository: SnippetAuthorizationRepository,
     private val auth0ManagementService: Auth0ManagementService,
 ) {
+    @Transactional
+    fun createAuthorization(
+        request: ingsist.auth.dto.GrantPermissionDto,
+        requestingUserId: String,
+    ): SnippetsAuthorization {
+        val snippetId = request.snippetId ?: throw IllegalArgumentException("Snippet ID is required")
+        return grantPermission(request.userId, snippetId, request.permission, requestingUserId)
+    }
+
     @Transactional
     fun grantPermission(
         targetUserId: String,
@@ -45,57 +52,30 @@ class AuthorizationService(
         return repository.save(newPermission)
     }
 
-    @Transactional
-    fun revokePermission(
-        targetUserId: String,
+    fun hasPermission(
+        userId: String,
         snippetId: String,
-        requestingUserId: String,
-    ) {
-        // 1. Validate that the requesting user can revoke permissions.
-        validateUserCanRevokePermission(requestingUserId, snippetId)
+        requiredPermission: AuthorizationTypes,
+    ): Boolean {
+        val userPermission = repository.findByUserIdAndSnippetId(userId, snippetId).orElse(null)
 
-        // 2. Find the permission to revoke.
-        val permissionToRevoke =
-            repository.findByUserIdAndSnippetId(targetUserId, snippetId)
-                .orElseThrow {
-                    PermissionNotFoundException(
-                        "No permission found for " +
-                            "user $targetUserId on snippet $snippetId",
+        return when (requiredPermission) {
+            AuthorizationTypes.WRITE -> userPermission?.permission == AuthorizationTypes.WRITE
+            AuthorizationTypes.READ ->
+                userPermission?.permission in
+                    listOf(
+                        AuthorizationTypes.READ,
+                        AuthorizationTypes.WRITE,
                     )
-                }
-
-        // 3. Check if revoking this permission would leave the snippet without any WRITE permissions.
-        if (permissionToRevoke.permission == AuthorizationTypes.WRITE) {
-            if (isLastWriter(snippetId)) {
-                throw CannotRevokeLastWritePermissionException(
-                    "Cannot revoke the " +
-                        "last WRITE permission for snippet $snippetId",
-                )
-            }
         }
-        // 4. Revoke the permission.
-        repository.delete(permissionToRevoke)
     }
 
-    fun checkPermission(
+    private fun checkPermission(
         userId: String,
         snippetId: String,
         requiredPermission: AuthorizationTypes,
     ) {
-        val userPermission = repository.findByUserIdAndSnippetId(userId, snippetId).orElse(null)
-
-        val hasPermission =
-            when (requiredPermission) {
-                AuthorizationTypes.WRITE -> userPermission?.permission == AuthorizationTypes.WRITE
-                AuthorizationTypes.READ ->
-                    userPermission?.permission in
-                        listOf(
-                            AuthorizationTypes.READ,
-                            AuthorizationTypes.WRITE,
-                        )
-            }
-
-        if (!hasPermission) {
+        if (!hasPermission(userId, snippetId, requiredPermission)) {
             throw UnauthorizedException(
                 "User $userId does not have " +
                     "$requiredPermission permission on snippet $snippetId",
@@ -131,26 +111,6 @@ class AuthorizationService(
         checkPermission(userId, snippetId, AuthorizationTypes.WRITE)
     }
 
-    private fun isLastWriter(snippetId: String): Boolean {
-        return repository.countBySnippetIdAndPermission(snippetId, AuthorizationTypes.WRITE) <= 1
-    }
-
-    /**
-     * NUEVO: Obtiene un permiso o falla (404).
-     * Reemplaza la necesidad de 'check'.
-     */
-    fun getPermission(
-        userId: String,
-        snippetId: String,
-    ): SnippetsAuthorization {
-        return repository.findByUserIdAndSnippetId(userId, snippetId)
-            .orElseThrow {
-                PermissionNotFoundException(
-                    "No permission found for user $userId on snippet $snippetId",
-                )
-            }
-    }
-
     /**
      * Obtiene todos los permisos para un snippet.
      * Incluye una validación de seguridad.
@@ -158,7 +118,7 @@ class AuthorizationService(
     fun getPermissionsForSnippet(
         snippetId: String,
         requestingUserId: String,
-    ): List<SnippetAuthorizationDto> {
+    ): List<SharedSnippetDto> {
         // Seguridad: Solo un "owner" (WRITE) puede ver la lista de permisos
         validateUserCanRevokePermission(requestingUserId, snippetId)
         val permissions = repository.findAllBySnippetId(snippetId)
@@ -167,7 +127,7 @@ class AuthorizationService(
         return permissions.map { permission ->
             val email = auth0ManagementService.getUserEmail(permission.userId)
 
-            SnippetAuthorizationDto(
+            SharedSnippetDto(
                 id = permission.id,
                 snippetId = permission.snippetId,
                 userId = permission.userId,
@@ -175,5 +135,39 @@ class AuthorizationService(
                 permission = permission.permission,
             )
         }
+    }
+
+    // Removed redundant wrapper methods to reduce function count
+
+    /**
+     * Obtiene todos los permisos para un usuario.
+     */
+    fun getPermissionsForUser(userId: String): List<SharedSnippetDto> {
+        val permissions = repository.findAllByUserId(userId)
+
+        // Mapeamos cada permiso buscando el email
+        return permissions.map { permission ->
+            val email = auth0ManagementService.getUserEmail(permission.userId)
+
+            SharedSnippetDto(
+                id = permission.id,
+                snippetId = permission.snippetId,
+                userId = permission.userId,
+                userEmail = email,
+                permission = permission.permission,
+            )
+        }
+    }
+
+    @Transactional
+    fun deleteSnippet(
+        snippetId: String,
+        requestingUserId: String,
+    ) {
+        // 1. Validate that the requesting user can delete the snippet (must be owner/writer)
+        validateUserCanRevokePermission(requestingUserId, snippetId)
+
+        // 2. Delete all permissions for the snippet
+        repository.deleteAllBySnippetId(snippetId)
     }
 }

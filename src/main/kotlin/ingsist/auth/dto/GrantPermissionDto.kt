@@ -5,4 +5,5 @@ import ingsist.auth.entity.AuthorizationTypes
 data class GrantPermissionDto(
     val userId: String,
     val permission: AuthorizationTypes,
+    val snippetId: String? = null,
 )

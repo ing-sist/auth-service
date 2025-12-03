@@ -1,6 +1,7 @@
 package ingsist.auth.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
@@ -217,7 +218,7 @@ class Auth0ManagementServiceTest {
         @DisplayName("Auth0TokenResponse should deserialize access_token correctly")
         fun `token response dto deserializes correctly`() {
             val json = """{"access_token":"test-token-123"}"""
-            val mapper = ObjectMapper()
+            val mapper = ObjectMapper().registerKotlinModule()
             val response = mapper.readValue(json, Auth0ManagementService.Auth0TokenResponse::class.java)
 
             assertEquals("test-token-123", response.accessToken)
@@ -227,7 +228,7 @@ class Auth0ManagementServiceTest {
         @DisplayName("Auth0UserResponse should deserialize email and name correctly")
         fun `user response dto deserializes email and name`() {
             val json = """{"email":"test@example.com","name":"Test User"}"""
-            val mapper = ObjectMapper()
+            val mapper = ObjectMapper().registerKotlinModule()
             val response = mapper.readValue(json, Auth0ManagementService.Auth0UserResponse::class.java)
 
             assertEquals("test@example.com", response.email)
@@ -238,7 +239,7 @@ class Auth0ManagementServiceTest {
         @DisplayName("Auth0UserResponse should handle null email")
         fun `user response dto handles null email`() {
             val json = """{"name":"Test User"}"""
-            val mapper = ObjectMapper()
+            val mapper = ObjectMapper().registerKotlinModule()
             val response = mapper.readValue(json, Auth0ManagementService.Auth0UserResponse::class.java)
 
             assertEquals(null, response.email)
@@ -249,7 +250,7 @@ class Auth0ManagementServiceTest {
         @DisplayName("Auth0UserResponse should handle null name")
         fun `user response dto handles null name`() {
             val json = """{"email":"test@example.com"}"""
-            val mapper = ObjectMapper()
+            val mapper = ObjectMapper().registerKotlinModule()
             val response = mapper.readValue(json, Auth0ManagementService.Auth0UserResponse::class.java)
 
             assertEquals("test@example.com", response.email)
@@ -260,7 +261,7 @@ class Auth0ManagementServiceTest {
         @DisplayName("Auth0UserResponse should handle empty JSON object")
         fun `user response dto handles empty json`() {
             val json = """{}"""
-            val mapper = ObjectMapper()
+            val mapper = ObjectMapper().registerKotlinModule()
             val response = mapper.readValue(json, Auth0ManagementService.Auth0UserResponse::class.java)
 
             assertEquals(null, response.email)
