@@ -10,11 +10,11 @@ import org.springframework.web.bind.annotation.RestController
 class HealthController {
     @GetMapping("/check")
     fun healthCheck(): ResponseEntity<String> {
-        return ResponseEntity.ok("Snippet Service is healthy")
+        return ResponseEntity.ok("Auth Service is healthy")
     }
 
     @GetMapping("/error")
     fun errorCheck(): ResponseEntity<String> {
-        return ResponseEntity.status(500).body("Snippet Service has an error")
+        return ResponseEntity.status(500).body("Auth Service has an error")
     }
 }
