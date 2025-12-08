@@ -3,6 +3,7 @@ package ingsist.auth.service
 import com.fasterxml.jackson.annotation.JsonProperty
 import ingsist.auth.dto.AuthUsersDto
 import ingsist.auth.exceptions.Auth0TokenException
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -17,12 +18,16 @@ class Auth0ManagementService(
     @Value("\${auth0.management.audience}") private val managementAudience: String,
     restClientBuilder: RestClient.Builder,
 ) {
+    val log = LoggerFactory.getLogger(Auth0ManagementService::class.java)
+
     private val client = restClientBuilder.build()
 
     fun getUserEmail(userId: String): String {
+        log.info("Fetching user email for ID: $userId")
         return try {
             // 1. Obtener Token para la Management API
             val token = getManagementApiToken()
+            log.debug("Obtained Management API token for user $userId")
 
             // 2. Normalizar dominio para la URL
             val authDomainUrl = if (domain.startsWith("http")) domain else "https://$domain"
@@ -34,16 +39,17 @@ class Auth0ManagementService(
                     .header("Authorization", "Bearer $token")
                     .retrieve()
                     .body(Auth0UserResponse::class.java)
+            log.debug("Fetched user data for ID {}: {}", userId, userResponse)
 
             userResponse?.email ?: "email_not_found"
         } catch (e: RestClientException) {
-            println("Error fetching user email for ID $userId: ${e.message}")
+            log.error("Error fetching user email for ID $userId: ${e.message}")
             "unknown_user"
         } catch (e: IllegalStateException) {
-            println("Error fetching user email for ID $userId: ${e.message}")
+            log.error("Error fetching user email for ID $userId: ${e.message}")
             "unknown_user"
         } catch (e: IllegalArgumentException) {
-            println("Error fetching user email for ID $userId: ${e.message}")
+            log.error("Error fetching user email for ID $userId: ${e.message}")
             "unknown_user"
         }
     }
