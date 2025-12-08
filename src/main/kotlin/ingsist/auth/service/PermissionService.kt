@@ -42,6 +42,7 @@ class PermissionService(
             "Granting $permissionToGrant permission on snippet $snippetId" +
                 " to user $targetUserId by requester $requestingUserId",
         )
+
         // 1. User can grant permissions
         validateUserCanGrantPermission(requestingUserId, snippetId)
 
